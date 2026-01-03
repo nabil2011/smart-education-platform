@@ -1,0 +1,815 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// User Management
+model User {
+  id            Int       @id @default(autoincrement())
+  uuid          String    @unique @default(uuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  firstName     String    @map("first_name")
+  lastName      String    @map("last_name")
+  role          UserRole
+  avatarUrl     String?   @map("avatar_url")
+  phone         String?
+  dateOfBirth   DateTime? @map("date_of_birth") @db.Date
+  gender        Gender?
+  isActive      Boolean   @default(true) @map("is_active")
+  emailVerified Boolean   @default(false) @map("email_verified")
+  lastLogin     DateTime? @map("last_login")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  studentProfile  StudentProfile?
+  teacherProfile  TeacherProfile?
+  sessions        UserSession[]
+  notifications   Notification[]
+  activityLogs    ActivityLog[]
+  createdContent  Content[]           @relation("ContentCreator")
+  createdAssessments Assessment[]     @relation("AssessmentCreator")
+  assessmentAttempts AssessmentAttempt[] @relation("StudentAttempts")
+  createdAssignments Assignment[]      @relation("AssignmentCreator")
+  assignmentSubmissions AssignmentSubmission[] @relation("StudentSubmissions")
+  gradedSubmissions  AssignmentSubmission[] @relation("SubmissionGrader")
+  pointsTransactions PointsTransaction[] @relation("StudentPointsTransactions")
+  studentBadges      StudentBadge[]      @relation("StudentBadges")
+  studentEnrollments StudentClassEnrollment[] @relation("StudentEnrollments")
+  createdRecoveryPlans RecoveryPlan[]    @relation("RecoveryPlanCreator")
+  createdEnhancementPlans EnhancementPlan[] @relation("EnhancementPlanCreator")
+  recoveryProgress   StudentRecoveryProgress[] @relation("StudentRecoveryProgress")
+  enhancementProgress StudentEnhancementProgress[] @relation("StudentEnhancementProgress")
+  createdDiagnosticTests DiagnosticTest[] @relation("DiagnosticTestCreator")
+  diagnosticTestResults DiagnosticTestResult[] @relation("StudentDiagnosticResults")
+  reviewedDiagnosticResults DiagnosticTestResult[] @relation("DiagnosticResultReviewer")
+  assignedRecoveryProgress StudentRecoveryProgress[] @relation("RecoveryProgressAssigner")
+  assignedEnhancementProgress StudentEnhancementProgress[] @relation("EnhancementProgressAssigner")
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}
+
+model StudentProfile {
+  id            Int    @id @default(autoincrement())
+  userId        Int    @unique @map("user_id")
+  studentId     String? @unique @map("student_id")
+  gradeLevel    Int    @map("grade_level")
+  classSection  String? @map("class_section")
+  parentName    String? @map("parent_name")
+  parentPhone   String? @map("parent_phone")
+  parentEmail   String? @map("parent_email")
+  totalPoints   Int    @default(0) @map("total_points")
+  currentLevel  Int    @default(1) @map("current_level")
+  currentStreak Int    @default(0) @map("current_streak")
+  longestStreak Int    @default(0) @map("longest_streak")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([gradeLevel])
+  @@index([totalPoints])
+  @@index([currentLevel])
+  @@map("student_profiles")
+}
+
+model TeacherProfile {
+  id              Int     @id @default(autoincrement())
+  userId          Int     @unique @map("user_id")
+  employeeId      String? @unique @map("employee_id")
+  schoolId        Int?    @map("school_id")
+  specialization  String?
+  yearsExperience Int?    @map("years_experience")
+  qualification   String?
+  academicYear    String  @map("academic_year")
+  bio             String? @db.Text
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school  School?  @relation(fields: [schoolId], references: [id])
+  classes Class[]
+
+  @@index([schoolId, academicYear])
+  @@map("teacher_profiles")
+}
+
+model School {
+  id            Int      @id @default(autoincrement())
+  name          String
+  address       String?  @db.Text
+  phone         String?
+  email         String?
+  principalName String?  @map("principal_name")
+  academicYear  String   @map("academic_year")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  teachers TeacherProfile[]
+  classes  Class[]
+
+  @@index([academicYear])
+  @@index([isActive])
+  @@map("schools")
+}
+
+model Class {
+  id           Int      @id @default(autoincrement())
+  name         String
+  gradeLevel   Int      @map("grade_level")
+  section      String?
+  schoolId     Int?     @map("school_id")
+  teacherId    Int?     @map("teacher_id")
+  academicYear String   @map("academic_year")
+  capacity     Int?     @default(30)
+  description  String?  @db.Text
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  school      School?                    @relation(fields: [schoolId], references: [id])
+  teacher     TeacherProfile?            @relation(fields: [teacherId], references: [id])
+  enrollments StudentClassEnrollment[]
+
+  @@index([schoolId, gradeLevel])
+  @@index([teacherId])
+  @@index([academicYear])
+  @@index([isActive])
+  @@map("classes")
+}
+
+model StudentClassEnrollment {
+  id           Int       @id @default(autoincrement())
+  studentId    Int       @map("student_id")
+  classId      Int       @map("class_id")
+  enrolledAt   DateTime  @default(now()) @map("enrolled_at")
+  withdrawnAt  DateTime? @map("withdrawn_at")
+  isActive     Boolean   @default(true) @map("is_active")
+  academicYear String    @map("academic_year")
+
+  // Relations
+  student User  @relation("StudentEnrollments", fields: [studentId], references: [id])
+  class   Class @relation(fields: [classId], references: [id])
+
+  @@unique([studentId, classId, academicYear])
+  @@index([classId, isActive])
+  @@index([academicYear])
+  @@map("student_class_enrollments")
+}
+
+model UserSession {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  sessionToken String   @unique @map("session_token")
+  refreshToken String   @unique @map("refresh_token")
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent") @db.Text
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  lastActivity DateTime @default(now()) @updatedAt @map("last_activity")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sessionToken])
+  @@index([userId, expiresAt])
+  @@map("user_sessions")
+}
+
+// Content Management
+model Subject {
+  id          Int      @id @default(autoincrement())
+  name        String
+  nameAr      String   @map("name_ar")
+  description String?  @db.Text
+  icon        String?
+  color       String?
+  gradeLevels Json     @map("grade_levels") // [4, 5, 6]
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  subject     Content[]
+  assessments Assessment[]
+  assignments Assignment[]
+  recoveryPlans RecoveryPlan[]
+  enhancementPlans EnhancementPlan[]
+  diagnosticTests DiagnosticTest[]
+
+  @@map("subjects")
+}
+
+model Content {
+  id           Int         @id @default(autoincrement())
+  uuid         String      @unique @default(uuid())
+  title        String
+  description  String?     @db.Text
+  contentType  ContentType @map("content_type")
+  subjectId    Int         @map("subject_id")
+  gradeLevel   Int         @map("grade_level")
+  difficulty   Difficulty  @default(medium)
+  tags         Json?       // ["reading", "grammar", "vocabulary"]
+  fileUrl      String?     @map("file_url")
+  thumbnailUrl String?     @map("thumbnail_url")
+  duration     Int?        // in minutes
+  viewCount    Int         @default(0) @map("view_count")
+  likeCount    Int         @default(0) @map("like_count")
+  isPublished  Boolean     @default(false) @map("is_published")
+  publishedAt  DateTime?   @map("published_at")
+  createdBy    Int         @map("created_by")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  subject Subject @relation(fields: [subjectId], references: [id])
+  creator User    @relation("ContentCreator", fields: [createdBy], references: [id])
+
+  @@index([subjectId, gradeLevel])
+  @@index([contentType, isPublished])
+  @@index([createdBy])
+  @@index([publishedAt])
+  @@map("content")
+}
+
+// Notifications
+model Notification {
+  id               Int              @id @default(autoincrement())
+  uuid             String           @unique @default(uuid())
+  userId           Int              @map("user_id")
+  title            String
+  message          String           @db.Text
+  notificationType NotificationType @map("notification_type")
+  referenceId      Int?             @map("reference_id")
+  referenceType    String?          @map("reference_type")
+  isRead           Boolean          @default(false) @map("is_read")
+  sentAt           DateTime         @default(now()) @map("sent_at")
+  readAt           DateTime?        @map("read_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([sentAt])
+  @@map("notifications")
+}
+
+// Activity Logging
+model ActivityLog {
+  id           Int      @id @default(autoincrement())
+  userId       Int?     @map("user_id")
+  action       String
+  resourceType String?  @map("resource_type")
+  resourceId   Int?     @map("resource_id")
+  details      Json?
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, action])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// Assessment System
+model Assessment {
+  id              Int                   @id @default(autoincrement())
+  uuid            String                @unique @default(uuid())
+  title           String
+  description     String?               @db.Text
+  subjectId       Int                   @map("subject_id")
+  gradeLevel      Int                   @map("grade_level")
+  difficultyLevel Difficulty            @map("difficulty_level")
+  durationMinutes Int                   @map("duration_minutes")
+  totalQuestions  Int                   @map("total_questions")
+  passingScore    Int                   @map("passing_score")
+  maxAttempts     Int                   @default(3) @map("max_attempts")
+  isPublished     Boolean               @default(false) @map("is_published")
+  publishedAt     DateTime?             @map("published_at")
+  createdBy       Int                   @map("created_by")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  subject   Subject              @relation(fields: [subjectId], references: [id])
+  creator   User                 @relation("AssessmentCreator", fields: [createdBy], references: [id])
+  questions AssessmentQuestion[]
+  attempts  AssessmentAttempt[]
+
+  @@index([subjectId, gradeLevel])
+  @@index([isPublished, publishedAt])
+  @@index([createdBy])
+  @@map("assessments")
+}
+
+model AssessmentQuestion {
+  id             Int          @id @default(autoincrement())
+  assessmentId   Int          @map("assessment_id")
+  questionText   String       @map("question_text") @db.Text
+  questionType   QuestionType @map("question_type")
+  options        Json?        // For multiple choice: ["option1", "option2", ...]
+  correctAnswer  String       @map("correct_answer") @db.Text
+  explanation    String?      @db.Text
+  points         Int          @default(1)
+  orderIndex     Int          @map("order_index")
+
+  // Relations
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId, orderIndex])
+  @@map("assessment_questions")
+}
+
+model AssessmentAttempt {
+  id              Int           @id @default(autoincrement())
+  uuid            String        @unique @default(uuid())
+  assessmentId    Int           @map("assessment_id")
+  studentId       Int           @map("student_id")
+  startedAt       DateTime      @default(now()) @map("started_at")
+  completedAt     DateTime?     @map("completed_at")
+  submittedAt     DateTime?     @map("submitted_at")
+  status          AttemptStatus @default(in_progress)
+  totalScore      Int?          @map("total_score")
+  maxScore        Int?          @map("max_score")
+  percentageScore Float?        @map("percentage_score")
+  timeSpent       Int?          @map("time_spent") // in seconds
+  answers         Json?         // Store all answers: {"questionId": "answer", ...}
+
+  // Relations
+  assessment Assessment @relation(fields: [assessmentId], references: [id])
+  student    User       @relation("StudentAttempts", fields: [studentId], references: [id])
+
+  @@index([studentId, assessmentId])
+  @@index([status])
+  @@index([completedAt])
+  @@map("assessment_attempts")
+}
+
+// Enums
+enum UserRole {
+  student
+  teacher
+  admin
+}
+
+enum Gender {
+  male
+  female
+}
+
+enum ContentType {
+  lesson
+  video
+  audio
+  document
+  interactive
+  quiz
+  story
+}
+
+enum Difficulty {
+  easy
+  medium
+  hard
+}
+
+enum NotificationType {
+  assignment
+  grade
+  achievement
+  reminder
+  system
+}
+
+enum QuestionType {
+  multiple_choice
+  true_false
+  fill_blank
+  essay
+}
+
+enum AttemptStatus {
+  in_progress
+  completed
+  submitted
+  auto_submitted
+  cancelled
+}
+
+// Assignment System
+model Assignment {
+  id             Int            @id @default(autoincrement())
+  uuid           String         @unique @default(uuid())
+  title          String
+  description    String?        @db.Text
+  instructions   String?        @db.Text
+  subjectId      Int            @map("subject_id")
+  gradeLevel     Int            @map("grade_level")
+  assignmentType AssignmentType @map("assignment_type")
+  attachments    Json?          // File URLs array
+  dueDate        DateTime       @map("due_date")
+  maxScore       Int            @default(100) @map("max_score")
+  allowLateSubmission Boolean   @default(false) @map("allow_late_submission")
+  latePenalty    Int?           @map("late_penalty") // percentage deduction per day
+  isPublished    Boolean        @default(false) @map("is_published")
+  publishedAt    DateTime?      @map("published_at")
+  createdBy      Int            @map("created_by")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  subject     Subject                @relation(fields: [subjectId], references: [id])
+  creator     User                   @relation("AssignmentCreator", fields: [createdBy], references: [id])
+  submissions AssignmentSubmission[]
+
+  @@index([subjectId, gradeLevel])
+  @@index([dueDate])
+  @@index([isPublished, publishedAt])
+  @@index([createdBy])
+  @@map("assignments")
+}
+
+model AssignmentSubmission {
+  id             Int              @id @default(autoincrement())
+  assignmentId   Int              @map("assignment_id")
+  studentId      Int              @map("student_id")
+  submissionText String?          @map("submission_text") @db.Text
+  attachments    Json?            // File URLs array
+  submittedAt    DateTime         @default(now()) @map("submitted_at")
+  isLate         Boolean          @default(false) @map("is_late")
+  score          Int?
+  feedback       String?          @db.Text
+  gradedBy       Int?             @map("graded_by")
+  gradedAt       DateTime?        @map("graded_at")
+  status         SubmissionStatus @default(submitted)
+
+  // Relations
+  assignment Assignment @relation(fields: [assignmentId], references: [id])
+  student    User       @relation("StudentSubmissions", fields: [studentId], references: [id])
+  grader     User?      @relation("SubmissionGrader", fields: [gradedBy], references: [id])
+
+  @@unique([assignmentId, studentId])
+  @@index([status])
+  @@index([submittedAt])
+  @@index([gradedAt])
+  @@map("assignment_submissions")
+}
+
+enum AssignmentType {
+  homework
+  project
+  quiz
+  essay
+  presentation
+  lab_work
+}
+
+enum SubmissionStatus {
+  submitted
+  graded
+  returned
+  late
+  missing
+}
+
+// Gamification System
+model PointsTransaction {
+  id              Int                 @id @default(autoincrement())
+  studentId       Int                 @map("student_id")
+  points          Int                 // Can be negative for deductions
+  transactionType TransactionType     @map("transaction_type")
+  referenceId     Int?                @map("reference_id")
+  referenceType   String?             @map("reference_type")
+  description     String?
+  createdAt       DateTime            @default(now()) @map("created_at")
+
+  // Relations
+  student User @relation("StudentPointsTransactions", fields: [studentId], references: [id])
+
+  @@index([studentId, createdAt])
+  @@index([transactionType])
+  @@map("points_transactions")
+}
+
+model Badge {
+  id          Int         @id @default(autoincrement())
+  name        String
+  nameAr      String      @map("name_ar")
+  description String?     @db.Text
+  descriptionAr String?   @map("description_ar") @db.Text
+  icon        String
+  color       String?
+  criteria    Json        // Conditions to earn this badge
+  pointsReward Int        @default(0) @map("points_reward")
+  rarity      BadgeRarity @default(common)
+  isActive    Boolean     @default(true) @map("is_active")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  studentBadges StudentBadge[]
+
+  @@map("badges")
+}
+
+model StudentBadge {
+  id           Int      @id @default(autoincrement())
+  studentId    Int      @map("student_id")
+  badgeId      Int      @map("badge_id")
+  earnedAt     DateTime @default(now()) @map("earned_at")
+  progressData Json?    @map("progress_data") // Track progress towards badge
+
+  // Relations
+  student User  @relation("StudentBadges", fields: [studentId], references: [id])
+  badge   Badge @relation(fields: [badgeId], references: [id])
+
+  @@unique([studentId, badgeId])
+  @@index([earnedAt])
+  @@map("student_badges")
+}
+
+enum TransactionType {
+  lesson_complete
+  assessment_pass
+  assignment_submit
+  daily_login
+  streak_bonus
+  badge_earned
+  manual_adjustment
+  late_penalty
+}
+
+enum BadgeRarity {
+  common
+  rare
+  epic
+  legendary
+}
+
+// Recovery and Enhancement Plans System
+model RecoveryPlan {
+  id              Int      @id @default(autoincrement())
+  uuid            String   @unique @default(uuid())
+  title           String
+  description     String?  @db.Text
+  subjectId       Int      @map("subject_id")
+  gradeLevel      Int      @map("grade_level")
+  weekNumber      Int      @map("week_number")
+  difficulty      Difficulty @default(medium)
+  objectives      Json?    // Learning objectives array
+  activities      Json?    // Activities and exercises array
+  resources       Json?    // File URLs and external links array
+  estimatedHours  Int?     @map("estimated_hours")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdBy       Int      @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  creator   User    @relation("RecoveryPlanCreator", fields: [createdBy], references: [id])
+  studentProgress StudentRecoveryProgress[]
+
+  @@index([subjectId, gradeLevel])
+  @@index([weekNumber])
+  @@index([isActive])
+  @@map("recovery_plans")
+}
+
+model EnhancementPlan {
+  id              Int      @id @default(autoincrement())
+  uuid            String   @unique @default(uuid())
+  title           String
+  description     String?  @db.Text
+  subjectId       Int      @map("subject_id")
+  gradeLevel      Int      @map("grade_level")
+  planType        EnhancementType @map("plan_type")
+  difficulty      Difficulty @default(medium)
+  objectives      Json?    // Learning objectives array
+  activities      Json?    // Activities and exercises array
+  resources       Json?    // File URLs and external links array
+  estimatedHours  Int?     @map("estimated_hours")
+  prerequisites   Json?    // Required skills or knowledge
+  isActive        Boolean  @default(true) @map("is_active")
+  createdBy       Int      @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  creator   User    @relation("EnhancementPlanCreator", fields: [createdBy], references: [id])
+  studentProgress StudentEnhancementProgress[]
+
+  @@index([subjectId, gradeLevel])
+  @@index([planType])
+  @@index([isActive])
+  @@map("enhancement_plans")
+}
+
+model StudentRecoveryProgress {
+  id              Int      @id @default(autoincrement())
+  studentId       Int      @map("student_id")
+  recoveryPlanId  Int      @map("recovery_plan_id")
+  assignedAt      DateTime @default(now()) @map("assigned_at")
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  status          ProgressStatus @default(assigned)
+  progressData    Json?    @map("progress_data") // Track completion of activities
+  completionRate  Float?   @map("completion_rate") // Percentage 0-100
+  timeSpent       Int?     @map("time_spent") // in minutes
+  notes           String?  @db.Text
+  assignedBy      Int      @map("assigned_by")
+  academicYear    String   @map("academic_year")
+
+  // Relations
+  student      User         @relation("StudentRecoveryProgress", fields: [studentId], references: [id])
+  recoveryPlan RecoveryPlan @relation(fields: [recoveryPlanId], references: [id])
+  assignedByUser User       @relation("RecoveryProgressAssigner", fields: [assignedBy], references: [id])
+
+  @@unique([studentId, recoveryPlanId, academicYear])
+  @@index([status])
+  @@index([academicYear])
+  @@map("student_recovery_progress")
+}
+
+model StudentEnhancementProgress {
+  id                 Int      @id @default(autoincrement())
+  studentId          Int      @map("student_id")
+  enhancementPlanId  Int      @map("enhancement_plan_id")
+  assignedAt         DateTime @default(now()) @map("assigned_at")
+  startedAt          DateTime? @map("started_at")
+  completedAt        DateTime? @map("completed_at")
+  status             ProgressStatus @default(assigned)
+  progressData       Json?    @map("progress_data") // Track completion of activities
+  completionRate     Float?   @map("completion_rate") // Percentage 0-100
+  timeSpent          Int?     @map("time_spent") // in minutes
+  notes              String?  @db.Text
+  assignedBy         Int      @map("assigned_by")
+  academicYear       String   @map("academic_year")
+
+  // Relations
+  student         User            @relation("StudentEnhancementProgress", fields: [studentId], references: [id])
+  enhancementPlan EnhancementPlan @relation(fields: [enhancementPlanId], references: [id])
+  assignedByUser  User            @relation("EnhancementProgressAssigner", fields: [assignedBy], references: [id])
+
+  @@unique([studentId, enhancementPlanId, academicYear])
+  @@index([status])
+  @@index([academicYear])
+  @@map("student_enhancement_progress")
+}
+
+enum EnhancementType {
+  enrichment
+  acceleration
+  talent_development
+  advanced_skills
+  creative_thinking
+  leadership
+}
+
+enum ProgressStatus {
+  assigned
+  in_progress
+  completed
+  paused
+  cancelled
+}
+
+// Diagnostic Testing System
+model DiagnosticTest {
+  id              Int      @id @default(autoincrement())
+  uuid            String   @unique @default(uuid())
+  title           String
+  description     String?  @db.Text
+  subjectId       Int      @map("subject_id")
+  gradeLevel      Int      @map("grade_level")
+  testType        DiagnosticTestType @map("test_type")
+  difficulty      TestDifficulty
+  duration        Int?     // in minutes
+  totalMarks      Int      @map("total_marks")
+  passingMarks    Int      @map("passing_marks")
+  instructions    String?  @db.Text
+  isActive        Boolean  @default(true) @map("is_active")
+  createdBy       Int      @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  subject     Subject                @relation(fields: [subjectId], references: [id])
+  creator     User                   @relation("DiagnosticTestCreator", fields: [createdBy], references: [id])
+  questions   DiagnosticTestQuestion[]
+  results     DiagnosticTestResult[]
+  attachments DiagnosticTestAttachment[]
+
+  @@index([subjectId])
+  @@index([gradeLevel])
+  @@index([testType])
+  @@index([difficulty])
+  @@index([createdBy])
+  @@index([isActive])
+  @@map("diagnostic_tests")
+}
+
+model DiagnosticTestQuestion {
+  id             Int      @id @default(autoincrement())
+  testId         Int      @map("test_id")
+  questionText   String   @map("question_text") @db.Text
+  questionType   DiagnosticQuestionType @map("question_type")
+  options        Json?    // Array of options for multiple choice
+  correctAnswer  String?  @map("correct_answer") @db.Text
+  marks          Int
+  order          Int
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  test DiagnosticTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@index([testId])
+  @@index([order])
+  @@map("diagnostic_test_questions")
+}
+
+model DiagnosticTestResult {
+  id              Int      @id @default(autoincrement())
+  testId          Int      @map("test_id")
+  studentId       Int      @map("student_id")
+  score           Int
+  totalMarks      Int      @map("total_marks")
+  percentage      Float
+  timeSpent       Int?     @map("time_spent") // in minutes
+  answers         Json?    // Array of student answers
+  weaknesses      Json?    // Array of identified weaknesses
+  recommendations Json?    // Array of learning recommendations
+  status          TestResultStatus @default(pending)
+  completedAt     DateTime? @map("completed_at")
+  reviewedAt      DateTime? @map("reviewed_at")
+  reviewedBy      Int?     @map("reviewed_by")
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  test     DiagnosticTest @relation(fields: [testId], references: [id])
+  student  User           @relation("StudentDiagnosticResults", fields: [studentId], references: [id])
+  reviewer User?          @relation("DiagnosticResultReviewer", fields: [reviewedBy], references: [id])
+
+  @@unique([testId, studentId])
+  @@index([studentId])
+  @@index([status])
+  @@index([completedAt])
+  @@map("diagnostic_test_results")
+}
+
+model DiagnosticTestAttachment {
+  id           Int      @id @default(autoincrement())
+  testId       Int      @map("test_id")
+  fileName     String   @map("file_name")
+  originalName String   @map("original_name")
+  filePath     String   @map("file_path")
+  fileSize     Int      @map("file_size")
+  mimeType     String   @map("mime_type")
+  uploadedAt   DateTime @default(now()) @map("uploaded_at")
+
+  // Relations
+  test DiagnosticTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@index([testId])
+  @@map("diagnostic_test_attachments")
+}
+
+enum DiagnosticTestType {
+  written
+  oral
+  practical
+}
+
+enum TestDifficulty {
+  easy
+  medium
+  hard
+}
+
+enum DiagnosticQuestionType {
+  multiple_choice
+  true_false
+  short_answer
+  essay
+}
+
+enum TestResultStatus {
+  pending
+  completed
+  reviewed
+}

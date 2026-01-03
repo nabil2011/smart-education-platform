@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="light">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="https://lh3.googleusercontent.com/aida-public/AB6AXuC7_LL8626l8VaW5lfBubMdFi-c2B53J8jp8rAnyNKUIcV2DSTKERguM7JU1UKHyeKa_6R42rGsNA8yj_FLQ622OCmoktHzMf6IHkkrGDfKTnZcfR5gLc9RNsbJ-D7hyprc22HO8mEozmCVjQBSirYP7HCS04DmRM4_1Lo2IN9V_pE8PFAiEULVQPqx6CNGJ7fk8c7VuwQ7gONctAX8VqGlDgpkjW-Z0uB16vTpbz6p6T4dQdPy4JW2R3bh5BUJMTbhLLtES4B20EA" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#13ec5b" />
+    <title>منصة الداعم التعليمي الذكية</title>
+    <meta
+      name="description"
+      content="منصة تعليمية متكاملة تدعم الطلاب والمعلمين"
+    />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                DEFAULT: '#13ec5b',
+                50: '#eefdf2',
+                100: '#d7fbe2',
+                200: '#b2f6cb',
+                300: '#7debac',
+                400: '#44d886',
+                500: '#13ec5b',
+                600: '#0bc74a',
+                700: '#099d3c',
+                800: '#0b7c34',
+                900: '#0a652e',
+                950: '#023816',
+              },
+              secondary: {
+                DEFAULT: '#1e293b',
+              },
+              surface: {
+                light: '#f8fcf9',
+                dark: '#102216',
+              }
+            },
+            fontFamily: {
+              display: ['Lexend', 'sans-serif'],
+              body: ['Noto Sans Arabic', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <style>
+      body {
+        font-family: 'Noto Sans Arabic', sans-serif;
+      }
+      .font-lexend {
+        font-family: 'Lexend', sans-serif;
+      }
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+      }
+      .filled-icon {
+        font-variation-settings: 'FILL' 1;
+      }
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1; 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8; 
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #334155; 
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: #475569; 
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-surface-light dark:bg-surface-dark text-slate-900 dark:text-slate-100 transition-colors duration-200">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
