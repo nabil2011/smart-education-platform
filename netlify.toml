@@ -4,12 +4,10 @@
   
   # مجلد الإخراج بعد البناء
   publish = "dist"
-  
-  # إعدادات Node.js
-  environment = { NODE_VERSION = "18" }
 
 [build.environment]
-  # متغيرات البيئة (يمكن إضافة المزيد حسب الحاجة)
+  # متغيرات البيئة
+  NODE_VERSION = "18"
   NODE_ENV = "production"
 
 # إعادة توجيه للتطبيقات أحادية الصفحة (SPA)
